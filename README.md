@@ -32,6 +32,11 @@ structure; agents then **corroborate or refute** each candidate, an adversarial
 **Skeptic** prunes weak members, and a synthesizer confirms the ring. No account
 ids, amounts, hours or dates are baked in; answer keys live only in `eval.py`.
 
+It is deliberately **hybrid**: LLM agents *reason and decide*, deterministic
+Python tools do the *exact math*, and **ring membership is anchored to the
+engine's candidate** — the Skeptic may only prune members that have no concrete
+tie, so LLM variance can never drop a genuine member.
+
 ```
                  ┌──────────────────────────────────────────────┐
    STEP 1        │  Unsupervised engine  (numpy + networkx)       │
@@ -52,13 +57,50 @@ ids, amounts, hours or dates are baked in; answer keys live only in `eval.py`.
                           (typed graph + semantic recall, fastembed)
    STEP 3                              │
   confirm                             ▼
-                          ┌────────────────────────┐
-                          │   Risk Synthesizer      │ keep members corroborated
-                          │                         │ by ≥1 lens & not vetoed →
-                          └───────────┬────────────┘ ring + exposure
-                                      ▼
+                          ┌────────────────────────┐ membership anchored to the
+                          │   Risk Synthesizer      │ engine candidate; a member
+                          │   (REASONING_MODEL)     │ stays unless the Skeptic
+                          └───────────┬────────────┘ vetoes it AND it has no tie
+                                      ▼              → ring + internal exposure
                        Verdict  →  streamed over WebSocket  →  Live UI
 ```
+
+### Models (OpenRouter → Google Gemini)
+LLM calls go through **OpenRouter** (OpenAI-compatible API at
+`https://openrouter.ai/api/v1`) to **Google Gemini** (routed via the user's
+Vertex integration on OpenRouter). Two roles, two models:
+
+| Role | Setting | Default model | Used for |
+|---|---|---|---|
+| Specialist tool-calling loops | `AGENT_MODEL` | `google/gemini-2.5-flash` | the chatty per-agent reason → call-tool → reason loop |
+| Reasoning / synthesis | `REASONING_MODEL` | `google/gemini-2.5-pro` | each agent's structured JSON conclusion + the Synthesizer's case narrative |
+| Cognee memory embeddings | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` (384-dim) | **local fastembed** — *not* via OpenRouter (it has no embeddings endpoint), zero tokens, fully offline |
+
+Only **`OPENROUTER_API_KEY`** is required for live reasoning. With **no key**,
+`llm.available()` is false and every agent runs its **deterministic analysis
+path** instead — the pipeline still completes end-to-end and passes the
+benchmark. (`COGNEE_LLM_MODEL` is only touched by Cognee's optional graph
+narration; the core write/recall path never needs an LLM.)
+
+### The flow, step by step
+1. **Memory online.** The orchestrator (Lead Investigator) boots Cognee and
+   embeds the account/transfer graph with fastembed into Cognee's Kuzu (graph)
+   + LanceDB (vector) stores.
+2. **Engine surfaces a candidate.** The unsupervised detector runs (features →
+   robust anomaly → coordination graph → strong-edge communities → scored
+   candidates) and emits its single top **candidate cluster**.
+3. **Six agents examine that candidate, concurrently.** 5 corroborator
+   specialists + 1 Adversarial Skeptic each run an **LLM tool-calling loop**
+   (deterministic fallback if no key): they're handed the candidate + recalled
+   peer findings, call deterministic analytics tools, then emit a short
+   structured conclusion. Each **writes its finding to Cognee** and **recalls
+   peers' findings** semantically — genuine cross-agent shared memory.
+4. **Synthesizer fuses the verdict.** The Risk Synthesizer keeps a candidate
+   member if ≥1 corroborator lens supports it **and** the Skeptic didn't prune
+   it — but membership is **anchored to the engine candidate**: the Skeptic's
+   veto only sticks for members with *no* concrete tie (peer transfer, shared
+   cohort, or mule role). Exposure is the confirmed ring's internal
+   peer-transfer flow. The verdict streams over WebSocket to the live UI.
 
 ### Why it's content-agnostic (bulletproof)
 Every cut-off is a **percentile or gap of the data at hand** — anomaly is
@@ -87,6 +129,17 @@ neighborhood**, and **score the coordination of an arbitrary set** to test
 hypotheses — so the verdict is *earned by corroboration*, not assembled from
 fixed rules.
 
+**Per-agent LLM mechanics.** Each agent gets the case brief, the engine
+candidate, and its semantically-recalled peer findings, then runs a bounded
+function-calling loop (`AGENT_MODEL`, up to 6 tool iterations) over its lens
+tools — the exact math is done in Python, the LLM just decides what to look at
+and what it means. It then produces a short **structured JSON conclusion**
+(`REASONING_MODEL`: `title`, `summary`, `flagged_accounts`, `confidence`). The
+finding's **`signal` label is fixed to the agent's lens** (e.g. Network →
+`account_to_account_transfers`, Skeptic → `skeptic_veto`) — it is *not*
+LLM-chosen — so the synthesizer always knows which lens corroborated which
+member. Any LLM/tool error falls back to that agent's deterministic path.
+
 ### Why Cognee
 Each agent **writes its findings to Cognee** (typed `Finding` nodes), and agents
 **recall peers' findings via semantic search** before they start — genuine
@@ -99,7 +152,8 @@ graph** is also built in Cognee (Kuzu graph + LanceDB vectors). Embeddings run
 ## Tech stack
 - **Backend:** Python · FastAPI · WebSocket streaming · pandas · networkx
 - **Memory:** Cognee 1.1 (local Kuzu + LanceDB + SQLite, fastembed embeddings)
-- **LLM:** Google Vertex (Gemini) via **OpenRouter** (OpenAI-compatible)
+- **LLM:** Google **Gemini** via **OpenRouter** (OpenAI-compatible) —
+  `AGENT_MODEL` (flash) for specialist loops, `REASONING_MODEL` (pro) for synthesis
 - **Frontend:** Next.js 16 · React 19 · Tailwind v4 · React Flow · Framer Motion
 
 ---
@@ -133,10 +187,13 @@ key** in `backend/.env`:
 ```bash
 OPENROUTER_API_KEY=sk-or-v1-...
 ```
-Models default to your **Google Vertex** models via OpenRouter
-(`google/gemini-2.5-flash` for the specialists, `google/gemini-2.5-pro` for the
-synthesizer) — change `AGENT_MODEL` / `REASONING_MODEL` in `.env` to taste. The
-header shows **"Gemini reasoning live"** once a key is detected.
+OpenRouter routes to **Google Gemini** (via your Vertex integration):
+`AGENT_MODEL=google/gemini-2.5-flash` drives the specialists' tool-calling loops
+and `REASONING_MODEL=google/gemini-2.5-pro` the structured conclusions +
+synthesis — change either in `.env` to taste. Cognee's embeddings always run
+**locally via fastembed** (no embeddings call goes to OpenRouter), so memory is
+free and offline regardless. The header shows **"Gemini reasoning live"** once a
+key is detected.
 
 ---
 
