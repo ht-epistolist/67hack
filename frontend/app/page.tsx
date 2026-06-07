@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FileSignature, Loader2, Sparkles } from "lucide-react";
 import { AgentRoster } from "@/components/AgentRoster";
+import { ChatPanel } from "@/components/ChatPanel";
 import { SarReport } from "@/components/SarReport";
 import { DataPanel } from "@/components/DataPanel";
 import { DataTable } from "@/components/DataTable";
@@ -22,7 +23,7 @@ export default function Home() {
   const [view, setView] = useState<View>("datasets");
   const [showVerdict, setShowVerdict] = useState(false);
   const [showSar, setShowSar] = useState(false);
-  const [rightTab, setRightTab] = useState<"reasoning" | "memory">("reasoning");
+  const [rightTab, setRightTab] = useState<"reasoning" | "memory" | "ask">("reasoning");
 
   useEffect(() => {
     if (inv.verdict && inv.started) setShowVerdict(true);
@@ -136,26 +137,28 @@ export default function Home() {
               </section>
               <aside className="flex min-h-0 flex-col rounded-xl border border-border bg-card/40 p-3">
                 <div className="mb-2 flex items-center gap-1 rounded-lg border border-border bg-background/60 p-0.5">
-                  {(["reasoning", "memory"] as const).map((t) => (
+                  {(["reasoning", "memory", "ask"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setRightTab(t)}
                       className={cn(
-                        "flex-1 rounded-md px-2 py-1 text-[12px] font-medium capitalize transition-colors",
+                        "flex-1 rounded-md px-2 py-1 text-[12px] font-medium transition-colors",
                         rightTab === t
                           ? "bg-accent text-foreground"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      {t === "memory" ? "Cognee memory" : "Reasoning"}
+                      {t === "memory" ? "Cognee" : t === "ask" ? "Ask" : "Reasoning"}
                     </button>
                   ))}
                 </div>
                 <div className="min-h-0 flex-1">
                   {rightTab === "reasoning" ? (
                     <ReasoningFeed events={inv.events} />
-                  ) : (
+                  ) : rightTab === "memory" ? (
                     <MemoryPanel events={inv.events} />
+                  ) : (
+                    <ChatPanel />
                   )}
                 </div>
               </aside>
