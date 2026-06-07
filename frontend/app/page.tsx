@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { FileSignature, Loader2, Sparkles } from "lucide-react";
 import { AgentRoster } from "@/components/AgentRoster";
+import { SarReport } from "@/components/SarReport";
 import { DataPanel } from "@/components/DataPanel";
 import { DataTable } from "@/components/DataTable";
 import { DatasetPicker } from "@/components/DatasetPicker";
@@ -20,6 +21,7 @@ export default function Home() {
   const inv = useInvestigation();
   const [view, setView] = useState<View>("datasets");
   const [showVerdict, setShowVerdict] = useState(false);
+  const [showSar, setShowSar] = useState(false);
   const [rightTab, setRightTab] = useState<"reasoning" | "memory">("reasoning");
 
   useEffect(() => {
@@ -50,6 +52,18 @@ export default function Home() {
             </span>
           )}
           <div className="ml-auto" />
+          {view === "investigation" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowSar(true)}
+              disabled={!inv.verdict}
+              title={inv.verdict ? "Open the Suspicious Activity Report" : "Available once the investigation completes"}
+              className="gap-2"
+            >
+              <FileSignature size={14} /> Export SAR
+            </Button>
+          )}
           {view !== "datasets" && (
             <Button size="sm" onClick={launch} disabled={inv.running || inv.busy} className="gap-2">
               {inv.running ? (
@@ -149,6 +163,8 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      <SarReport open={showSar} onClose={() => setShowSar(false)} />
     </main>
   );
 }

@@ -10,10 +10,9 @@ services:
   # ── Backend: FastAPI + WebSocket. Heavy tree (cognee/fastembed/lancedb/kuzu),
   #    so we build from a Dockerfile rather than the Python buildpack. ──
   - name: api
-    github:
-      repo: ht-epistolist/67hack
-      branch: main
-      deploy_on_push: true
+    git:
+      repo_clone_url: https://github.com/ht-epistolist/67hack.git
+      branch: feat/sen
     dockerfile_path: backend/Dockerfile
     source_dir: /
     http_port: 8080
@@ -51,10 +50,9 @@ services:
 
   # ── Frontend: Next.js 16 via the Node buildpack. ──
   - name: web
-    github:
-      repo: ht-epistolist/67hack
-      branch: main
-      deploy_on_push: true
+    git:
+      repo_clone_url: https://github.com/ht-epistolist/67hack.git
+      branch: feat/sen
     source_dir: frontend
     build_command: npm run build
     run_command: npm start
@@ -63,9 +61,5 @@ services:
     instance_size_slug: apps-s-1vcpu-0.5gb
     routes:
       - path: /
-    envs:
-      # NEXT_PUBLIC_* is inlined at BUILD time. ${APP_URL} is the app's own
-      # public URL, so the browser talks same-origin to /api and /ws.
-      - key: NEXT_PUBLIC_API_URL
-        scope: BUILD_TIME
-        value: ${APP_URL}
+    # No NEXT_PUBLIC_API_URL needed: the frontend defaults to same-origin in the
+    # browser, and /api + /ws are routed to the backend on this same domain.

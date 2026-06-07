@@ -237,6 +237,14 @@ async def report():
     return {"status": "no_investigation_yet"}
 
 
+@app.get("/api/sar")
+async def sar():
+    """The full Suspicious Activity Report assembled from the latest investigation."""
+    from app.sar import build_sar
+
+    return build_sar()
+
+
 @app.post("/api/investigate")
 async def investigate():
     # Fire-and-forget; progress streams over the WebSocket.

@@ -1,10 +1,15 @@
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-export const WS_URL =
-  (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(
-    /^http/,
-    "ws"
-  ) + "/ws";
+// Prefer NEXT_PUBLIC_API_URL (local dev / split deploys). Otherwise default to
+// same-origin in the browser so the app works wherever it's deployed — on
+// DigitalOcean App Platform, /api and /ws are routed to the backend on the same
+// domain. The localhost fallback only applies during SSR/build with no env set.
+const _BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:8000");
+
+export const API_BASE = _BASE;
+export const WS_URL = _BASE.replace(/^http/, "ws") + "/ws";
 
 export type InvEvent = {
   type: string;
@@ -93,6 +98,60 @@ export type Dataset = {
     window_days: number;
   };
   error?: string;
+};
+
+export type SarFinding = {
+  id: string;
+  agent: string;
+  title: string;
+  text: string;
+  signal: string;
+  signal_label: string;
+  confidence: number;
+  accounts: string[];
+  adversarial: boolean;
+};
+
+export type SarSubject = {
+  account_id: string;
+  risk_score: number;
+  signal_count: number;
+  signals: string[];
+  opened: string | null;
+  receiver_only: boolean;
+  recommended_action: string;
+  citations: string[];
+};
+
+export type Sar = {
+  status: "ready" | "no_investigation_yet";
+  report_id: string;
+  filed_on: string;
+  institution: { name: string; dataset_id?: string };
+  period: { start: string; end: string; days: number };
+  summary: {
+    ring_size: number;
+    exposure: number;
+    transfer_count: number;
+    confidence: number;
+    confidence_tier: string;
+    transactions_reviewed: number;
+    accounts_reviewed: number;
+    candidate_size?: number;
+    pruned?: string[];
+  };
+  narrative: string;
+  subjects: SarSubject[];
+  findings: SarFinding[];
+  methods: { signal: string; label: string; findings: number; ring_accounts: number }[];
+  grounding: { claims: number; resolved: number };
+  engine?: Verdict["engine"];
+  appendix: {
+    columns: string[];
+    rows: (string | number)[][];
+    total_internal_transfers: number;
+    shown: number;
+  };
 };
 
 export type Overview = {
