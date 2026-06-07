@@ -163,14 +163,15 @@ async def _narrative(ring, exp, candidate, findings) -> str:
         result = await llm.structured(
             system=(
                 "You are the lead financial-crime investigator writing the final case "
-                "report from corroborated evidence. Be precise; do not invent facts."
+                "report from corroborated evidence. Be precise; do not invent facts. "
+                "Write at most TWO sentences."
             ),
             user=(
                 f"Confirmed ring ({len(ring)}): {', '.join(ring)}\n"
                 f"Exposure: ${exp['exposure']:,.2f} / {exp['transfer_count']} transfers.\n\n"
                 f"Corroboration:\n{ev}"
             ),
-            schema_hint='{"narrative": "a 4-6 sentence report"}',
+            schema_hint='{"narrative": "a 2-sentence report"}',
         )
         return result.get("narrative", base)
     except Exception:

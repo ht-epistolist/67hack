@@ -39,14 +39,19 @@ async def chat(
     tools: list[dict] | None = None,
     model: str | None = None,
     temperature: float = 0.2,
+    max_tokens: int = 350,
 ):
-    """One chat turn. Returns the raw assistant message (may carry tool_calls)."""
+    """One chat turn. Returns the raw assistant message (may carry tool_calls).
+
+    `max_tokens` is capped low on purpose — agent messages should be terse notes,
+    not paragraphs (keeps the live feed readable and runs fast/cheap)."""
     if _client is None:
         raise RuntimeError("LLM unavailable (no OPENROUTER_API_KEY)")
     kwargs: dict[str, Any] = {
         "model": model or settings.agent_model,
         "messages": messages,
         "temperature": temperature,
+        "max_tokens": max_tokens,
     }
     if tools:
         kwargs["tools"] = tools

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Brain,
   CheckCircle2,
@@ -77,6 +77,7 @@ function fmtArgs(args: unknown): string {
 
 export function ReasoningFeed({ events }: { events: InvEvent[] }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   useEffect(() => {
     ref.current?.scrollTo({ top: ref.current.scrollHeight, behavior: "smooth" });
   }, [events.length]);
@@ -100,11 +101,15 @@ export function ReasoningFeed({ events }: { events: InvEvent[] }) {
           const l = line(e)!;
           const isVerdict = e.type === "verdict";
           const isFinding = e.type === "finding";
+          const key = `${e.ts}-${i}`;
+          const isOpen = !!open[key];
           return (
-            <div
-              key={`${e.ts}-${i}`}
+            <button
+              key={key}
+              type="button"
+              onClick={() => setOpen((p) => ({ ...p, [key]: !p[key] }))}
               className={cn(
-                "feed-enter flex gap-2 rounded-md px-2.5 py-1.5 text-[12px] leading-snug",
+                "feed-enter flex w-full gap-2 rounded-md px-2.5 py-1.5 text-left text-[12px] leading-snug",
                 isVerdict
                   ? "border-l-2 border-threat bg-accent/50 font-medium text-foreground"
                   : isFinding
@@ -115,8 +120,10 @@ export function ReasoningFeed({ events }: { events: InvEvent[] }) {
               )}
             >
               <Icon size={14} className="mt-0.5 shrink-0 opacity-60" />
-              <span className="min-w-0">{l.text}</span>
-            </div>
+              <span className={cn("min-w-0", isOpen ? "whitespace-pre-wrap break-words" : "line-clamp-2")}>
+                {l.text}
+              </span>
+            </button>
           );
         })}
       </div>

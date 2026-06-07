@@ -119,13 +119,18 @@ class Agent:
                 "lens genuinely supports as ring members and which look innocent."
             )
         messages = [
-            {"role": "system", "content": self.system_prompt},
+            {
+                "role": "system",
+                "content": self.system_prompt
+                + " Be terse: every message is a short note or headline, never a "
+                "paragraph. No preamble, no restating the task.",
+            },
             {
                 "role": "user",
                 "content": (
                     f"{case_brief}{cand_block}{mem_block}\n\nUse your tools to "
-                    "investigate, then stop and state your conclusion in prose. Be "
-                    "specific about which account IDs your lens supports and why."
+                    "investigate, then stop. State your conclusion in ONE short "
+                    "sentence (≤25 words) naming the account IDs your lens supports."
                 ),
             },
         ]
@@ -180,11 +185,12 @@ class Agent:
             return await llm.structured(
                 system=(
                     f"You are {self.name}. Summarize YOUR investigation into a JSON "
-                    "verdict. Only flag accounts your evidence actually supports."
+                    "verdict. Only flag accounts your evidence actually supports. "
+                    "Keep `summary` to ONE short sentence (≤25 words)."
                 ),
                 user=f"Investigation notes:\n{transcript}",
                 schema_hint=(
-                    '{"title": str, "summary": str, '
+                    '{"title": "≤6 words", "summary": "one short sentence", '
                     '"flagged_accounts": ["AC-XXXX", ...], '
                     '"signal": str, "confidence": 0.0-1.0}'
                 ),
