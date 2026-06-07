@@ -41,3 +41,12 @@ time, so coordinated rings hiding under the review threshold slip through.
 Fraud Watch's four agents find, rank, action, and document the whole ring from
 the raw data — turning a three-minute discovery into a three-minute
 confirmation.
+
+## How the pipeline works (50 words)
+
+Four agents collaborate through a shared Cognee memory graph. FraudFinder runs
+deterministic detectors (R01–R06) over the raw bank CSV, flagging suspicious
+transactions. RiskRanker scores accounts worst-first into one case. CaseActor
+assigns a disposition—escalate, freeze, or monitor—logging the rules that fired.
+NarrativeWriter composes the signable SAR memo. Each handoff is memory, not glue
+code.
