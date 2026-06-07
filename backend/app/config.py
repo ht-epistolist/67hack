@@ -33,6 +33,11 @@ class Settings:
     agent_model: str = os.getenv("AGENT_MODEL", "google/gemini-2.5-flash")
     reasoning_model: str = os.getenv("REASONING_MODEL", "google/gemini-2.5-pro")
 
+    # --- Geo (outreach integration; optional, post-investigation action) ---
+    # Personal access token from app.geodo.ai; powers emailing the SAR via the
+    # user's connected Gmail. Backend-only secret — never exposed to the client.
+    geo_api_token: str = os.getenv("GEO_API_TOKEN", "")
+
     # --- Cognee memory ---
     cognee_dir: Path = BACKEND_DIR / ".cognee"
     cognee_llm_model: str = os.getenv(

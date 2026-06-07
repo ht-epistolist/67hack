@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import math
 
 import networkx as nx
 from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from app import llm
 from app.agents.orchestrator import run_investigation
@@ -245,11 +247,77 @@ async def sar():
     return build_sar()
 
 
+@app.get("/api/geo/status")
+async def geo_status():
+    """Whether the Geo outreach integration is configured, and which Gmail it sends from."""
+    from app.integrations import geo
+
+    if not geo.geo_enabled():
+        return {"enabled": False}
+    try:
+        state = await geo.account_state()
+        gmail = ((state or {}).get("connections") or {}).get("gmail") or {}
+        acct = gmail.get("account") or {}
+        return {
+            "enabled": True,
+            "gmail_connected": bool(gmail.get("connected")),
+            "from_email": acct.get("email"),
+        }
+    except geo.GeoError as exc:
+        return {"enabled": True, "error": str(exc)}
+
+
+@app.post("/api/geo/send-sar")
+async def geo_send_sar(payload: dict):
+    """Email the assembled SAR to a recipient via the user's Geo-connected Gmail.
+
+    Triggered by an explicit user action in the UI — the click is the send
+    confirmation, which we replay against Geo's confirmation gate.
+    """
+    from app.integrations import geo
+    from app.sar import build_sar
+
+    if not geo.geo_enabled():
+        raise HTTPException(503, "Geo is not configured (set GEO_API_TOKEN).")
+    to = (payload.get("to") or "").strip()
+    if not to:
+        raise HTTPException(400, "A recipient email ('to') is required.")
+    sar_doc = build_sar()
+    if sar_doc.get("status") != "ready":
+        raise HTTPException(409, "No completed investigation to send yet.")
+    subject, body = geo.sar_email(sar_doc, payload.get("examiner", ""))
+    if payload.get("subject"):
+        subject = str(payload["subject"])
+    try:
+        result = await geo.send_gmail(to, subject, body)
+    except geo.GeoError as exc:
+        raise HTTPException(502, f"Geo send failed: {exc}")
+    return {"ok": True, "to": to, "subject": subject, "result": result}
+
+
 @app.post("/api/investigate")
 async def investigate():
     # Fire-and-forget; progress streams over the WebSocket.
     asyncio.create_task(run_investigation(fresh=True))
     return {"started": True}
+
+
+@app.post("/api/chat")
+async def chat(body: dict):
+    """Grounded analyst chat — streams tool activity + the answer as NDJSON."""
+    from app.agents.chat import chat_stream
+
+    history = body.get("history", []) or []
+    question = str(body.get("question", "")).strip()
+
+    async def gen():
+        if not question:
+            yield json.dumps({"type": "answer", "text": "Ask a question about the case."}) + "\n"
+            return
+        async for evt in chat_stream(history, question):
+            yield json.dumps(evt) + "\n"
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
 
 
 @app.websocket("/ws")

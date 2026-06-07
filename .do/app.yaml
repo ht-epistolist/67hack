@@ -32,6 +32,10 @@ services:
         scope: RUN_TIME
         type: SECRET
         value: REPLACE_ME            # set the real key in the dashboard / via doctl
+      - key: GEO_API_TOKEN           # optional: enables "Email SAR via Geo"
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
       - key: AGENT_MODEL
         scope: RUN_TIME
         value: google/gemini-2.5-flash

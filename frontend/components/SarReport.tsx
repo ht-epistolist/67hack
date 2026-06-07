@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, FileSignature, Loader2, Printer, X } from "lucide-react";
+import { Download, FileSignature, Loader2, Mail, Printer, Send, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { API_BASE, type Sar } from "@/lib/types";
 
@@ -34,6 +34,18 @@ export function SarReport({ open, onClose }: { open: boolean; onClose: () => voi
   const [loading, setLoading] = useState(false);
   const [examiner, setExaminer] = useState("");
 
+  // Geo outreach (post-investigation: email the SAR via the connected Gmail).
+  const [geo, setGeo] = useState<{
+    enabled: boolean;
+    gmail_connected?: boolean;
+    from_email?: string;
+    error?: string;
+  } | null>(null);
+  const [showGeo, setShowGeo] = useState(false);
+  const [to, setTo] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendMsg, setSendMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   useEffect(() => {
     if (!open) return;
     setLoading(true);
@@ -42,6 +54,17 @@ export function SarReport({ open, onClose }: { open: boolean; onClose: () => voi
       .then((d: Sar) => setSar(d))
       .catch(() => setSar(null))
       .finally(() => setLoading(false));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch(`${API_BASE}/api/geo/status`)
+      .then((r) => r.json())
+      .then((g) => {
+        setGeo(g);
+        if (g?.from_email) setTo((cur) => cur || g.from_email);
+      })
+      .catch(() => setGeo({ enabled: false }));
   }, [open]);
 
   const download = useCallback(() => {
@@ -68,6 +91,29 @@ export function SarReport({ open, onClose }: { open: boolean; onClose: () => voi
 
   const ready = sar && sar.status === "ready";
 
+  const sendViaGeo = useCallback(async () => {
+    if (!ready || !to.trim() || sending) return;
+    setSending(true);
+    setSendMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/geo/send-sar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: to.trim(), examiner }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setSendMsg(
+        res.ok
+          ? { ok: true, text: `Sent to ${d.to}` }
+          : { ok: false, text: d.detail || `Failed (${res.status})` }
+      );
+    } catch {
+      setSendMsg({ ok: false, text: "Network error — could not reach the server." });
+    } finally {
+      setSending(false);
+    }
+  }, [ready, to, examiner, sending]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -91,6 +137,16 @@ export function SarReport({ open, onClose }: { open: boolean; onClose: () => voi
               <FileSignature size={16} />
               <span className="text-sm font-medium">Suspicious Activity Report</span>
               <div className="ml-auto flex items-center gap-2">
+                {geo?.enabled && (
+                  <button
+                    onClick={() => setShowGeo((v) => !v)}
+                    disabled={!ready}
+                    title="Email this SAR via Geo (your connected Gmail)"
+                    className="flex items-center gap-1.5 rounded-md border border-zinc-600 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+                  >
+                    <Mail size={14} /> Email via Geo
+                  </button>
+                )}
                 <button
                   onClick={download}
                   disabled={!ready}
@@ -114,6 +170,60 @@ export function SarReport({ open, onClose }: { open: boolean; onClose: () => voi
                 </button>
               </div>
             </div>
+
+            {/* Geo outreach panel: email the SAR via the connected Gmail */}
+            {showGeo && ready && geo?.enabled && (
+              <div className="mb-3 rounded-lg border border-zinc-700 bg-zinc-900/80 p-3 text-zinc-200">
+                <div className="mb-2 flex items-center gap-2 text-xs text-zinc-400">
+                  <Mail size={13} />
+                  <span>
+                    Email this SAR
+                    {geo.from_email ? (
+                      <>
+                        {" "}from{" "}
+                        <span className="font-mono text-zinc-300">{geo.from_email}</span>
+                      </>
+                    ) : null}{" "}
+                    via Geo
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="email"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    placeholder="recipient@example.com"
+                    className="min-w-[240px] flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-500"
+                  />
+                  <button
+                    onClick={sendViaGeo}
+                    disabled={sending || !to.trim() || geo.gmail_connected === false}
+                    className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-40"
+                  >
+                    {sending ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Send size={14} />
+                    )}
+                    {sending ? "Sending…" : "Send"}
+                  </button>
+                </div>
+                {geo.gmail_connected === false && (
+                  <p className="mt-2 text-xs text-amber-400">
+                    No Gmail is connected in Geo — connect one in Geo settings to send.
+                  </p>
+                )}
+                {sendMsg && (
+                  <p className={`mt-2 text-xs ${sendMsg.ok ? "text-emerald-400" : "text-red-400"}`}>
+                    {sendMsg.text}
+                  </p>
+                )}
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  Sends a real email via your connected Gmail with the SAR summary,
+                  narrative, subject accounts, and key findings.
+                </p>
+              </div>
+            )}
 
             {/* The paper-white document (always light) */}
             <div className="rounded-lg bg-white text-zinc-900 shadow-2xl ring-1 ring-black/10">
