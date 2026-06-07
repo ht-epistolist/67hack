@@ -12,7 +12,7 @@ services:
   - name: api
     git:
       repo_clone_url: https://github.com/ht-epistolist/67hack.git
-      branch: feat/sen
+      branch: main
     dockerfile_path: backend/Dockerfile
     source_dir: /
     http_port: 8080
@@ -56,7 +56,7 @@ services:
   - name: web
     git:
       repo_clone_url: https://github.com/ht-epistolist/67hack.git
-      branch: feat/sen
+      branch: main
     source_dir: frontend
     build_command: npm run build
     run_command: npm start
