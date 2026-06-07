@@ -37,6 +37,51 @@ _PRELOADED: list[dict] = [
             ],
         },
     },
+    {
+        "id": "ring_c",
+        "name": "Test — Ring C (fan-in hub)",
+        "description": "11 accounts · ~$3k structuring · midday burst · fan-in collection hub.",
+        "path": str(REPO_ROOT / "data" / "test-rings" / "ring_c_fanin.csv"),
+        "answer_key": {
+            "ring": [
+                "AC-0600", "AC-0601", "AC-0602", "AC-0603", "AC-0604", "AC-0605",
+                "AC-0606", "AC-0607", "AC-0608", "AC-0609", "AC-0610",
+            ],
+            "exposure": 839715.93,
+        },
+    },
+    {
+        "id": "ring_d",
+        "name": "Test — Ring D (deep chain)",
+        "description": "9 accounts · ~$10k structuring · weekend/night · 4-hop layering chain.",
+        "path": str(REPO_ROOT / "data" / "test-rings" / "ring_d_chain.csv"),
+        "answer_key": {
+            "ring": [
+                "AC-0700", "AC-0701", "AC-0702", "AC-0703", "AC-0704",
+                "AC-0705", "AC-0706", "AC-0707", "AC-0708",
+            ],
+            "exposure": 2838524.29,
+        },
+    },
+    {
+        "id": "ring_e",
+        "name": "Test — Ring E (hard / stealthy)",
+        "description": "6 accounts · ~$500 structuring · NO timing tell · loose cohort — stress test.",
+        "path": str(REPO_ROOT / "data" / "test-rings" / "ring_e_hard.csv"),
+        "answer_key": {
+            "ring": [
+                "AC-0800", "AC-0801", "AC-0802", "AC-0803", "AC-0804", "AC-0805",
+            ],
+            "exposure": 83483.68,
+        },
+    },
+    {
+        "id": "clean",
+        "name": "Test — Clean (no ring)",
+        "description": "Control · no coordinated ring · checks the false-positive guard.",
+        "path": str(REPO_ROOT / "data" / "test-rings" / "clean_control.csv"),
+        "answer_key": {"ring": []},
+    },
 ]
 
 # Runtime-uploaded datasets (id -> meta).
