@@ -1,0 +1,179 @@
+```text
+project_root/
+├── data/
+│   └── track02_fraud_watch.csv
+├── src/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── filter_pipeline.py
+│   ├── graph_builder.py
+│   └── agent_team.py
+├── main.py
+└── requirements.txt
+
+```
+
+```text
+# requirements.txt
+pandas
+networkx
+cognee
+crewai
+langchain-openai
+python-dotenv
+
+```
+
+```python
+# src/config.py
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATA_PATH = "data/track02_fraud_watch.csv"
+MIN_AMOUNT = 400
+MAX_AMOUNT = 900
+START_HOUR = 2
+END_HOUR = 4
+
+```
+
+```python
+# src/filter_pipeline.py
+import pandas as pd
+from .config import MIN_AMOUNT, MAX_AMOUNT, START_HOUR, END_HOUR
+
+def load_and_filter_data(file_path: str) -> pd.DataFrame:
+    df = pd.read_csv(file_path, parse_dates=['timestamp', 'account_open_date'])
+    
+    # Heuristic Triage
+    df['hour'] = df['timestamp'].dt.hour
+    filtered_df = df[
+        (df['amount'] >= MIN_AMOUNT) & 
+        (df['amount'] <= MAX_AMOUNT) & 
+        (df['hour'] >= START_HOUR) & 
+        (df['hour'] <= END_HOUR)
+    ]
+    return filtered_df
+
+```
+
+```python
+# src/graph_builder.py
+import networkx as nx
+import cognee
+import pandas as pd
+
+async def initialize_cognee_graph(df: pd.DataFrame):
+    # Cognee setup and ingestion schema
+    await cognee.prune.prune_data()
+    
+    # In a full implementation, you would map the dataframe directly into Cognee's add_data pipeline
+    # For skeleton purposes, we mock the ingestion and cycle detection using NetworkX logic.
+    G = nx.DiGraph()
+    
+    for _, row in df.iterrows():
+        G.add_edge(row['account_id'], row['counterparty_id'], 
+                   amount=row['amount'], 
+                   device=row['device_id'])
+        
+    return G
+
+def find_circular_loops(G: nx.DiGraph) -> list:
+    cycles = list(nx.simple_cycles(G))
+    # Filter for specific loop constraints (e.g., length > 2)
+    return [c for c in cycles if len(c) > 2]
+
+```
+
+```python
+# src/agent_team.py
+from crewai import Agent, Task, Crew, Process
+from langchain_openai import ChatOpenAI
+
+def run_agentic_adjudication(loops: list, filtered_data: pd.DataFrame):
+    llm = ChatOpenAI(model="gpt-4o")
+
+    cross_examiner = Agent(
+        role="Cross-Examiner",
+        goal="Identify and eliminate distractor accounts based on lifecycle and device mismatches.",
+        backstory="Expert in forensic financial data anomalies.",
+        verbose=True,
+        llm=llm
+    )
+
+    network_tracer = Agent(
+        role="Network Tracer",
+        goal="Calculate the exact financial exposure across verified circular loops.",
+        backstory="Graph topology and money laundering analyst.",
+        verbose=True,
+        llm=llm
+    )
+
+    adjudicator = Agent(
+        role="Adjudicator",
+        goal="Produce the final JSON payload containing the 12 fraud accounts and 15 exonerated accounts.",
+        backstory="Lead judge for the fraud command center.",
+        verbose=True,
+        llm=llm
+    )
+
+    task_analyze_loops = Task(
+        description=f"Analyze these detected network loops: {loops}. Filter out false positives from this data: {filtered_data.head()}",
+        agent=cross_examiner,
+        expected_output="A list of verified fraudulent loops and a list of eliminated distractors."
+    )
+
+    task_calculate_exposure = Task(
+        description="Using the verified loops, calculate the total dollar amount passed through the network.",
+        agent=network_tracer,
+        expected_output="Total exposure dollar amount."
+    )
+
+    task_final_report = Task(
+        description="Compile findings into a final structured output of True Positives and False Positives.",
+        agent=adjudicator,
+        expected_output="Final JSON dossier."
+    )
+
+    crew = Crew(
+        agents=[cross_examiner, network_tracer, adjudicator],
+        tasks=[task_analyze_loops, task_calculate_exposure, task_final_report],
+        process=Process.sequential
+    )
+
+    return crew.kickoff()
+
+```
+
+```python
+# main.py
+import asyncio
+from src.config import DATA_PATH
+from src.filter_pipeline import load_and_filter_data
+from src.graph_builder import initialize_cognee_graph, find_circular_loops
+from src.agent_team import run_agentic_adjudication
+
+async def main():
+    print("Step 1: Filtering Data...")
+    filtered_data = load_and_filter_data(DATA_PATH)
+    
+    print(f"Data reduced to {len(filtered_data)} high-risk transactions.")
+    
+    print("Step 2: Building Graph & Detecting Cycles...")
+    graph = await initialize_cognee_graph(filtered_data)
+    loops = find_circular_loops(graph)
+    
+    print(f"Found {len(loops)} potential circular loops.")
+    
+    print("Step 3: Agentic Adjudication...")
+    final_report = run_agentic_adjudication(loops, filtered_data)
+    
+    print("\n--- Final Output ---")
+    print(final_report)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+```

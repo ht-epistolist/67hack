@@ -1,0 +1,238 @@
+{
+  "ring_members": [
+    "AC-0001",
+    "AC-0002",
+    "AC-0003",
+    "AC-0005",
+    "AC-0006",
+    "AC-0007",
+    "AC-0009",
+    "AC-0010",
+    "AC-0011"
+  ],
+  "exonerated_accounts": [],
+  "total_exposure": 161750.9,
+  "loops": [
+    {
+      "loop_id": "LOOP-01",
+      "path": [
+        "AC-0001",
+        "AC-0002"
+      ],
+      "exposure": 26985.76,
+      "txn_count": 42
+    },
+    {
+      "loop_id": "LOOP-02",
+      "path": [
+        "AC-0005",
+        "AC-0006"
+      ],
+      "exposure": 27736.13,
+      "txn_count": 42
+    },
+    {
+      "loop_id": "LOOP-03",
+      "path": [
+        "AC-0005",
+        "AC-0009"
+      ],
+      "exposure": 26160.09,
+      "txn_count": 41
+    },
+    {
+      "loop_id": "LOOP-04",
+      "path": [
+        "AC-0009",
+        "AC-0007"
+      ],
+      "exposure": 29120.71,
+      "txn_count": 42
+    },
+    {
+      "loop_id": "LOOP-05",
+      "path": [
+        "AC-0010",
+        "AC-0011"
+      ],
+      "exposure": 26819.97,
+      "txn_count": 42
+    },
+    {
+      "loop_id": "LOOP-06",
+      "path": [
+        "AC-0011",
+        "AC-0003"
+      ],
+      "exposure": 24928.24,
+      "txn_count": 41
+    }
+  ],
+  "candidate_accounts": [
+    "AC-0012",
+    "AC-0060",
+    "AC-0136",
+    "AC-0150",
+    "AC-0152",
+    "AC-0159",
+    "AC-0203",
+    "AC-0218",
+    "AC-0247",
+    "AC-0295"
+  ],
+  "account_scores": {
+    "AC-0001": {
+      "score": 8.5,
+      "signals": [
+        "in_circular_loop",
+        "ac_to_ac_sender",
+        "open_date_cluster",
+        "heuristic_match",
+        "regular_timing"
+      ]
+    },
+    "AC-0002": {
+      "score": 4.0,
+      "signals": [
+        "in_circular_loop",
+        "ring_member"
+      ]
+    },
+    "AC-0003": {
+      "score": 7.0,
+      "signals": [
+        "in_scc",
+        "in_circular_loop",
+        "ring_member"
+      ]
+    },
+    "AC-0005": {
+      "score": 11.5,
+      "signals": [
+        "in_scc",
+        "in_circular_loop",
+        "ac_to_ac_sender",
+        "open_date_cluster",
+        "heuristic_match",
+        "regular_timing"
+      ]
+    },
+    "AC-0006": {
+      "score": 7.0,
+      "signals": [
+        "in_scc",
+        "in_circular_loop",
+        "ring_member"
+      ]
+    },
+    "AC-0007": {
+      "score": 7.0,
+      "signals": [
+        "in_scc",
+        "in_circular_loop",
+        "ring_member"
+      ]
+    },
+    "AC-0009": {
+      "score": 11.5,
+      "signals": [
+        "in_scc",
+        "in_circular_loop",
+        "ac_to_ac_sender",
+        "open_date_cluster",
+        "heuristic_match",
+        "regular_timing"
+      ]
+    },
+    "AC-0010": {
+      "score": 12.0,
+      "signals": [
+        "in_scc",
+        "in_circular_loop",
+        "ac_to_ac_sender",
+        "open_date_cluster",
+        "heuristic_match",
+        "behavioral_drift"
+      ]
+    },
+    "AC-0011": {
+      "score": 12.0,
+      "signals": [
+        "in_scc",
+        "in_circular_loop",
+        "ac_to_ac_sender",
+        "open_date_cluster",
+        "heuristic_match",
+        "behavioral_drift"
+      ]
+    },
+    "AC-0012": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0016": {
+      "score": 0.0,
+      "signals": [
+        "open_date_cluster",
+        "distractor_penalty"
+      ]
+    },
+    "AC-0060": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0136": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0150": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0152": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0159": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0203": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0218": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0247": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    },
+    "AC-0295": {
+      "score": 2.0,
+      "signals": [
+        "open_date_cluster"
+      ]
+    }
+  },
+  "narrative": "Detection pipeline identified 9 ring members across 6 circular loops with total exposure $161,750.90. 0 accounts were exonerated as false positives. Run with USE_LLM=true for an AI-generated narrative."
+}
